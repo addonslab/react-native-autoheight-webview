@@ -71,26 +71,29 @@ export default class AutoHeightWebView extends PureComponent {
   }
 
   onMessage = event => {
-    const height = parseInt(event.nativeEvent.data);
-    if (height && height !== this.state.height) {
-      const { enableAnimation, animationDuration, heightOffset, onSizeUpdated, style } = this.props;
-      enableAnimation && this.opacityAnimatedValue.setValue(0);
-      this.stopInterval();
-      this.setState(
-        {
-          heightOffset,
-          height
-        },
-        () => {
-          const currentWidth = Object.assign(styles.container, style).width;
-          enableAnimation
-            ? Animated.timing(this.opacityAnimatedValue, {
-                toValue: 1,
-                duration: animationDuration
-              }).start(() => handleSizeUpdated(height, currentWidth, onSizeUpdated))
-            : handleSizeUpdated(height, currentWidth, onSizeUpdated);
-        }
-      );
+    if(event && event.nativeEvent && typeof event.nativeEvent.data==='string' && parseInt(event.nativeEvent.data)!==NaN) {
+      const height = parseInt(event.nativeEvent.data);
+      if (height && height !== this.state.height) {
+        const { enableAnimation, animationDuration, heightOffset, onSizeUpdated, style } = this.props;
+        enableAnimation && this.opacityAnimatedValue.setValue(0);
+        this.stopInterval();
+        this.setState(
+          {
+            heightOffset,
+            height
+          },
+          () => {
+            const currentWidth = Object.assign(styles.container, style).width;
+            enableAnimation
+              ? Animated.timing(this.opacityAnimatedValue, {
+                  toValue: 1,
+                  duration: animationDuration
+                }).start(() => handleSizeUpdated(height, currentWidth, onSizeUpdated))
+              : handleSizeUpdated(height, currentWidth, onSizeUpdated);
+          }
+        );
+      }
+      return;
     }
     const { onMessage } = this.props;
     onMessage && onMessage(event);

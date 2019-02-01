@@ -149,24 +149,28 @@ export default class AutoHeightWebView extends PureComponent {
     if (!event.nativeEvent) {
       return;
     }
-    let data = {};
-    // Sometimes the message is invalid JSON, so we ignore that case
-    try {
-      data = JSON.parse(event.nativeEvent.data);
-    } catch (error) {
-      console.error(error);
-      return;
+    if(typeof event.nativeEvent.data === 'string') {
+      let data = {};
+      // Sometimes the message is invalid JSON, so we ignore that case
+      try {
+        data = JSON.parse(event.nativeEvent.data);
+        if(data.hasOwnProperty('width') && data.hasOwnProperty('height')) {
+          const { height, width } = data;
+          const { height: oldHeight, width: oldWidth } = this.state;
+          if (isSizeChanged(height, oldHeight, width, oldWidth)) {
+            this.stopInterval();
+            this.setState({
+              isSizeChanged: true,
+              height,
+              width
+            });
+          }
+          return;
+        }
+      } catch (error) {
+      }
     }
-    const { height, width } = data;
-    const { height: oldHeight, width: oldWidth } = this.state;
-    if (isSizeChanged(height, oldHeight, width, oldWidth)) {
-      this.stopInterval();
-      this.setState({
-        isSizeChanged: true,
-        height,
-        width
-      });
-    }
+    
     const { onMessage } = this.props;
     onMessage && onMessage(event);
   };
