@@ -47,6 +47,7 @@ export default class AutoHeightWebView extends PureComponent {
 
   constructor(props) {
     super(props);
+    this.onMessage = this.onMessage.bind(this);
     const { enableAnimation, style } = props;
     enableAnimation && (this.opacityAnimatedValue = new Animated.Value(0));
     this.webView = React.createRef();
@@ -92,7 +93,7 @@ export default class AutoHeightWebView extends PureComponent {
   }
 
   handleNavigationStateChange = navState => {
-    const { title } = navState;
+    const {   title } = navState;
     const { onNavigationStateChange } = this.props;
     if (!title) {
       onNavigationStateChange && onNavigationStateChange(navState);
@@ -116,6 +117,36 @@ export default class AutoHeightWebView extends PureComponent {
   stopLoading() {
     this.webView.current.stopLoading();
   }
+
+  onMessage = event => {
+    if (!event.nativeEvent) {
+      return;
+    }
+    if(typeof event.nativeEvent.data === 'string') {
+      let data = {};
+      // Sometimes the message is invalid JSON, so we ignore that case
+      try {
+        data = JSON.parse(event.nativeEvent.data);
+        if(data.hasOwnProperty('width') && data.hasOwnProperty('height')) {
+          const { height, width } = data;
+          const { height: oldHeight, width: oldWidth } = this.state;
+          if (isSizeChanged(height, oldHeight, width, oldWidth)) {
+            this.stopInterval();
+            this.setState({
+              isSizeChanged: true,
+              height,
+              width
+            });
+          }
+          return;
+        }
+      } catch (error) {
+      }
+    }
+    
+    const { onMessage } = this.props;
+    onMessage && onMessage(event);
+  };
 
   render() {
     const { height, width } = this.state;
@@ -161,7 +192,7 @@ export default class AutoHeightWebView extends PureComponent {
           dataDetectorTypes={dataDetectorTypes}
           originWhitelist={originWhitelist || ['*']}
           ref={this.webView}
-          onMessage={onMessage}
+          onMessage={this.onMessage}
           onError={onError}
           onLoad={onLoad}
           onLoadStart={onLoadStart}
@@ -215,6 +246,13 @@ function getBaseScript(style) {
                height = size.height;
                width = size.width;
                document.title = height.toString() + ',' + width.toString();
+               if(window.postMessage.length===1) {
+                /** react native implements the function with just one argument in difference to the default method */
+                window.postMessage(JSON.stringify({
+                  width: width,
+                  height: height,
+                }));
+               }
             }
           }
         ${commonScript}

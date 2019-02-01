@@ -8,7 +8,7 @@ import { androidPropTypes } from './propTypes.js';
 
 import Immutable from 'immutable';
 
-import { handleSizeUpdated, domMutationObserveScript } from './common.js';
+import { handleSizeUpdated, domMutationObserveScript, getCurrentSize } from './common.js';
 
 export default class AutoHeightWebView extends PureComponent {
   static propTypes = androidPropTypes;
@@ -71,7 +71,7 @@ export default class AutoHeightWebView extends PureComponent {
   }
 
   onMessage = event => {
-    if(event && event.nativeEvent && typeof event.nativeEvent.data==='string' && parseInt(event.nativeEvent.data)!==NaN) {
+    if(event && event.nativeEvent && typeof event.nativeEvent.data==='string' && !isNaN(event.nativeEvent.data)) {
       const height = parseInt(event.nativeEvent.data);
       if (height && height !== this.state.height) {
         const { enableAnimation, animationDuration, heightOffset, onSizeUpdated, style } = this.props;
@@ -187,11 +187,26 @@ const styles = StyleSheet.create({
   }
 });
 
-const baseScript = `
-; (function () {
-    document.addEventListener('message', function (e) {
-        window.postMessage(String(document.body.offsetHeight));
-    });
+const commonScript = `
+    ${getCurrentSize}
+    var wrapper = document.createElement("div");
+    wrapper.id = "wrapper";
+    while (document.body.firstChild instanceof Node) {
+        wrapper.appendChild(document.body.firstChild);
+    }
+    document.body.appendChild(wrapper);
+    var height = 0;
+`;
+
+const baseScript =`
+  ${commonScript}
+  function updateSize() {
+    var size = getSize(document.body.firstChild); 
+    height = size.height;
+    window.postMessage(String(height));
+  }
+  (function () {
+    document.addEventListener("message", updateSize);
     ${domMutationObserveScript}
-} ());
+  } ());
 `;
